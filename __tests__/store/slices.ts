@@ -1,3 +1,4 @@
+import { configureStore, combineReducers } from '@reduxjs/toolkit';
 import bookingsReducer, {
   addBooking,
   cancelBooking,
@@ -9,6 +10,7 @@ import doctorsReducer, {
   fetchDoctors,
 } from '../../src/store/slices/doctorsSlice';
 import type { BookingsState, DoctorsState, Booking, Doctor } from '../../src/types';
+import { doctorService } from '../../src/services/api';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -238,3 +240,146 @@ describe('doctorsSlice async transitions', () => {
   it('returns initial state for unknown action', () =>
     expect(doctorsReducer(undefined, { type: '@@UNKNOWN' })).toEqual(emptyDoctors));
 });
+
+// Mock the api service so tests don't hit the network
+jest.mock('../../src/services/api', () => ({
+  doctorService: {
+    fetchAvailability: jest.fn(),
+  },
+}));
+ 
+// Also mock processDoctors to return predictable output
+jest.mock('../../src/utils', () => {
+  const actual = jest.requireActual('../../src/utils');
+  return {
+    ...actual,
+    processDoctors: jest.fn((raw: any[]) =>
+      raw.map((r: any, i: number) => ({
+        id: `doctor_${i}`,
+        name: r.name ?? `Doctor ${i}`,
+        timezone: r.timezone ?? 'UTC',
+        schedule: [],
+        avatarColor: '#000',
+        initials: 'XX',
+      })),
+    ),
+  };
+});
+ 
+function makeFetchStore() {
+  return configureStore({
+    reducer: combineReducers({
+      doctors: doctorsReducer,
+      bookings: bookingsReducer,
+    }),
+  });
+}
+ 
+const RAW_DOCTOR = {
+  name: 'Dr. Fetch Test',
+  timezone: 'Australia/Sydney',
+  day_of_week: 'Monday',
+  available_at: '9:00AM',
+  available_until: '5:00PM',
+};
+ 
+// ─── fetchDoctors thunk ───────────────────────────────────────────────────────
+ 
+describe('fetchDoctors thunk — body coverage (lines 14-36)', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+ 
+  it('fetches and stores doctors on success', async () => {
+    (doctorService.fetchAvailability as jest.Mock).mockResolvedValueOnce([RAW_DOCTOR]);
+    const store = makeFetchStore();
+    await store.dispatch(fetchDoctors());
+    expect(store.getState().doctors.items.length).toBe(1);
+    expect(store.getState().doctors.loading).toBe(false);
+    expect(store.getState().doctors.error).toBeNull();
+  });
+ 
+  it('sets lastFetched after a successful fetch', async () => {
+    (doctorService.fetchAvailability as jest.Mock).mockResolvedValueOnce([RAW_DOCTOR]);
+    const store = makeFetchStore();
+    await store.dispatch(fetchDoctors());
+    expect(store.getState().doctors.lastFetched).not.toBeNull();
+    expect(new Date(store.getState().doctors.lastFetched!).getTime()).not.toBeNaN();
+  });
+ 
+  it('rejects with message when API returns empty array', async () => {
+    (doctorService.fetchAvailability as jest.Mock).mockResolvedValueOnce([]);
+    const store = makeFetchStore();
+    await store.dispatch(fetchDoctors());
+    expect(store.getState().doctors.error).toBeTruthy();
+    expect(store.getState().doctors.items.length).toBe(0);
+  });
+ 
+  it('rejects with error message on fetch failure', async () => {
+    (doctorService.fetchAvailability as jest.Mock).mockRejectedValueOnce(
+      new Error('Network timeout'),
+    );
+    const store = makeFetchStore();
+    await store.dispatch(fetchDoctors());
+    expect(store.getState().doctors.error).toBe('Network timeout');
+    expect(store.getState().doctors.loading).toBe(false);
+  });
+ 
+  it('uses fallback error message when error has no message', async () => {
+    (doctorService.fetchAvailability as jest.Mock).mockRejectedValueOnce('raw string error');
+    const store = makeFetchStore();
+    await store.dispatch(fetchDoctors());
+    expect(store.getState().doctors.error).toBeTruthy();
+  });
+ 
+  it('skips fetch when data is fresh (within 5 minutes)', async () => {
+    (doctorService.fetchAvailability as jest.Mock).mockResolvedValueOnce([RAW_DOCTOR]);
+    const store = makeFetchStore();
+    // First fetch — populates items and lastFetched
+    await store.dispatch(fetchDoctors());
+    expect((doctorService.fetchAvailability as jest.Mock).mock.calls.length).toBe(1);
+    // Second fetch immediately after — should use cached data
+    await store.dispatch(fetchDoctors());
+    expect((doctorService.fetchAvailability as jest.Mock).mock.calls.length).toBe(1);
+  });
+ 
+  it('force refresh bypasses the cache', async () => {
+    (doctorService.fetchAvailability as jest.Mock).mockResolvedValue([RAW_DOCTOR]);
+    const store = makeFetchStore();
+    await store.dispatch(fetchDoctors());
+    await store.dispatch(fetchDoctors({ forceRefresh: true }));
+    expect((doctorService.fetchAvailability as jest.Mock).mock.calls.length).toBe(2);
+  });
+ 
+  it('fetches when items are empty even if lastFetched is set', async () => {
+    (doctorService.fetchAvailability as jest.Mock).mockResolvedValue([RAW_DOCTOR]);
+    const store = makeFetchStore();
+    // Manually inject a lastFetched but leave items empty
+    store.dispatch({ type: 'doctors/fetchDoctors/fulfilled', payload: [] });
+    // items.length is 0 — cache should not be used
+    (doctorService.fetchAvailability as jest.Mock).mockClear();
+    (doctorService.fetchAvailability as jest.Mock).mockResolvedValueOnce([RAW_DOCTOR]);
+    await store.dispatch(fetchDoctors());
+    expect((doctorService.fetchAvailability as jest.Mock).mock.calls.length).toBe(1);
+  });
+ 
+  it('loading is true during pending, false after fulfilled', async () => {
+    let resolvePromise!: (v: any) => void;
+    const pending = new Promise(res => { resolvePromise = res; });
+    (doctorService.fetchAvailability as jest.Mock).mockReturnValueOnce(pending);
+    const store = makeFetchStore();
+    const thunkPromise = store.dispatch(fetchDoctors());
+    expect(store.getState().doctors.loading).toBe(true);
+    resolvePromise([RAW_DOCTOR]);
+    await thunkPromise;
+    expect(store.getState().doctors.loading).toBe(false);
+  });
+ 
+  it('loading is false after rejection', async () => {
+    (doctorService.fetchAvailability as jest.Mock).mockRejectedValueOnce(new Error('fail'));
+    const store = makeFetchStore();
+    await store.dispatch(fetchDoctors());
+    expect(store.getState().doctors.loading).toBe(false);
+  });
+});
+ 

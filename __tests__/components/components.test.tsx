@@ -5,6 +5,7 @@
  */
 
 import React from 'react';
+import { Alert, Text } from 'react-native';
 import { render, fireEvent } from '@testing-library/react-native';
 import DoctorAvatar from '../../src/components/common/DoctorAvatar';
 import EmptyState from '../../src/components/common/EmptyState';
@@ -12,6 +13,7 @@ import ErrorState from '../../src/components/common/ErrorState';
 import LoadingState from '../../src/components/common/LoadingState';
 import DoctorCard from '../../src/components/doctors/DoctorCard';
 import BookingCard from '../../src/components/bookings/BookingCard';
+import ScreenHeader from '../../src/components/common/ScreenHeader';
 import { Doctor, Booking } from '../../src/types';
 
 // ─── Mock SafeAreaContext ─────────────────────────────────────────────────────
@@ -359,5 +361,220 @@ describe('BookingCard', () => {
       <BookingCard booking={makeBooking()} index={0} onCancel={() => {}} />,
     );
     expect(getByText(/Sydney/)).toBeTruthy();
+  });
+});
+
+// ─── ScreenHeader ─────────────────────────────────────────────────────────────
+
+describe('ScreenHeader', () => {
+  it('renders the title', () => {
+    const { getByText } = render(<ScreenHeader title="Find a Doctor" />);
+    expect(getByText('Find a Doctor')).toBeTruthy();
+  });
+
+  it('renders subtitle when provided', () => {
+    const { getByText } = render(
+      <ScreenHeader title="Doctors" subtitle="Choose a specialist" />,
+    );
+    expect(getByText('Choose a specialist')).toBeTruthy();
+  });
+
+  it('does not render subtitle when not provided', () => {
+    const { queryByText } = render(<ScreenHeader title="Doctors" />);
+    expect(queryByText('Choose a specialist')).toBeNull();
+  });
+
+  it('renders back button when showBack is true', () => {
+    const { getByLabelText } = render(
+      <ScreenHeader title="Detail" showBack onBack={() => {}} />,
+    );
+    expect(getByLabelText('Go back')).toBeTruthy();
+  });
+
+  it('does not render back button when showBack is false', () => {
+    const { queryByLabelText } = render(<ScreenHeader title="Home" />);
+    expect(queryByLabelText('Go back')).toBeNull();
+  });
+
+  it('calls onBack when back button is pressed', () => {
+    const onBack = jest.fn();
+    const { getByLabelText } = render(
+      <ScreenHeader title="Detail" showBack onBack={onBack} />,
+    );
+    fireEvent.press(getByLabelText('Go back'));
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders rightElement when provided', () => {
+    const { getByText } = render(
+      <ScreenHeader title="Doctors" rightElement={<Text>Edit</Text>} />,
+    );
+    expect(getByText('Edit')).toBeTruthy();
+  });
+
+  it('elevated prop does not cause a crash', () => {
+    expect(() =>
+      render(<ScreenHeader title="Elevated" elevated />),
+    ).not.toThrow();
+  });
+
+  it('renders without subtitle or back button by default', () => {
+    const { queryByLabelText } = render(<ScreenHeader title="Home" />);
+    expect(queryByLabelText('Go back')).toBeNull();
+  });
+});
+
+// ─── BookingCard — handleCancel Alert flow (lines 21-29) ─────────────────────
+
+const makeBookingForCancel = (overrides: Partial<Booking> = {}): Booking => ({
+  id: 'booking_cancel_test',
+  doctorId: 'dr_alice_smith',
+  doctorName: 'Dr. Alice Smith',
+  doctorTimezone: 'Australia/Sydney',
+  slotId: 'slot_1',
+  dayOfWeek: 'Monday',
+  startTime: '09:00',
+  endTime: '09:30',
+  displayStart: '9:00 AM',
+  displayEnd: '9:30 AM',
+  bookedAt: '2024-03-15T09:00:00.000Z',
+  status: 'confirmed',
+  isPendingSync: false,
+  ...overrides,
+});
+
+describe('BookingCard — handleCancel Alert flow', () => {
+  beforeEach(() => {
+    jest.spyOn(Alert, 'alert');
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('pressing Cancel Appointment opens an Alert', () => {
+    const { getByText } = render(
+      <BookingCard
+        booking={makeBookingForCancel()}
+        index={0}
+        onCancel={jest.fn()}
+      />,
+    );
+    fireEvent.press(getByText('Cancel Appointment'));
+    expect(Alert.alert).toHaveBeenCalledTimes(1);
+  });
+
+  it('Alert title is "Cancel Appointment"', () => {
+    const { getByText } = render(
+      <BookingCard
+        booking={makeBookingForCancel()}
+        index={0}
+        onCancel={jest.fn()}
+      />,
+    );
+    fireEvent.press(getByText('Cancel Appointment'));
+    expect((Alert.alert as jest.Mock).mock.calls[0][0]).toBe(
+      'Cancel Appointment',
+    );
+  });
+
+  it('Alert message contains the doctor name', () => {
+    const { getByText } = render(
+      <BookingCard
+        booking={makeBookingForCancel()}
+        index={0}
+        onCancel={jest.fn()}
+      />,
+    );
+    fireEvent.press(getByText('Cancel Appointment'));
+    const message = (Alert.alert as jest.Mock).mock.calls[0][1] as string;
+    expect(message).toContain('Dr. Alice Smith');
+  });
+
+  it('Alert message contains the day of week', () => {
+    const { getByText } = render(
+      <BookingCard
+        booking={makeBookingForCancel()}
+        index={0}
+        onCancel={jest.fn()}
+      />,
+    );
+    fireEvent.press(getByText('Cancel Appointment'));
+    const message = (Alert.alert as jest.Mock).mock.calls[0][1] as string;
+    expect(message).toContain('Monday');
+  });
+
+  it('Alert has both "Keep it" and "Cancel Appointment" buttons', () => {
+    const { getByText } = render(
+      <BookingCard
+        booking={makeBookingForCancel()}
+        index={0}
+        onCancel={jest.fn()}
+      />,
+    );
+    fireEvent.press(getByText('Cancel Appointment'));
+    const buttons = (Alert.alert as jest.Mock).mock.calls[0][2] as any[];
+    expect(buttons.find(b => b.text === 'Keep it')).toBeTruthy();
+    expect(buttons.find(b => b.text === 'Cancel Appointment')).toBeTruthy();
+  });
+
+  it('"Keep it" button has style "cancel"', () => {
+    const { getByText } = render(
+      <BookingCard
+        booking={makeBookingForCancel()}
+        index={0}
+        onCancel={jest.fn()}
+      />,
+    );
+    fireEvent.press(getByText('Cancel Appointment'));
+    const buttons = (Alert.alert as jest.Mock).mock.calls[0][2] as any[];
+    expect(buttons.find(b => b.text === 'Keep it').style).toBe('cancel');
+  });
+
+  it('"Cancel Appointment" button has style "destructive"', () => {
+    const { getByText } = render(
+      <BookingCard
+        booking={makeBookingForCancel()}
+        index={0}
+        onCancel={jest.fn()}
+      />,
+    );
+    fireEvent.press(getByText('Cancel Appointment'));
+    const buttons = (Alert.alert as jest.Mock).mock.calls[0][2] as any[];
+    expect(buttons.find(b => b.text === 'Cancel Appointment').style).toBe(
+      'destructive',
+    );
+  });
+
+  it('confirming the destructive button calls onCancel with the booking id', () => {
+    const onCancel = jest.fn();
+    const { getByText } = render(
+      <BookingCard
+        booking={makeBookingForCancel()}
+        index={0}
+        onCancel={onCancel}
+      />,
+    );
+    fireEvent.press(getByText('Cancel Appointment'));
+    const buttons = (Alert.alert as jest.Mock).mock.calls[0][2] as any[];
+    buttons.find((b: any) => b.style === 'destructive').onPress();
+    expect(onCancel).toHaveBeenCalledWith('booking_cancel_test');
+  });
+
+  it('"Keep it" does not call onCancel', () => {
+    const onCancel = jest.fn();
+    const { getByText } = render(
+      <BookingCard
+        booking={makeBookingForCancel()}
+        index={0}
+        onCancel={onCancel}
+      />,
+    );
+    fireEvent.press(getByText('Cancel Appointment'));
+    const buttons = (Alert.alert as jest.Mock).mock.calls[0][2] as any[];
+    // cancel-style button has no onPress — it simply dismisses the Alert
+    const keepBtn = buttons.find((b: any) => b.text === 'Keep it');
+    expect(keepBtn.onPress).toBeUndefined();
+    expect(onCancel).not.toHaveBeenCalled();
   });
 });

@@ -13,16 +13,28 @@ import DoctorDetailScreen from '../screens/DoctorDetailScreen';
 import BookingConfirmationScreen from '../screens/BookingConfirmationScreen';
 import BookingSuccessScreen from '../screens/BookingSuccessScreen';
 import MyBookingsScreen from '../screens/MyBookingsScreen';
+import CalendarBookingScreen from '../screens/CalendarBookingScreen'; // ← NEW
 import { useAppSelector } from '../hooks/useRedux';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 const Tab = createBottomTabNavigator<BottomTabParamList>();
+
+// ─── Tab Icons ────────────────────────────────────────────────────────────────
 
 function DoctorsIcon({ focused }: { focused: boolean }) {
   const color = focused ? Colors.tabActive : Colors.tabInactive;
   return (
     <View style={[styles.tabIconContainer, focused && styles.tabIconActive]}>
       <Text style={[styles.tabIconText, { color }]}>⚕</Text>
+    </View>
+  );
+}
+
+function CalendarIcon({ focused }: { focused: boolean }) {
+  const color = focused ? Colors.tabActive : Colors.tabInactive;
+  return (
+    <View style={[styles.tabIconContainer, focused && styles.tabIconActive]}>
+      <Text style={[styles.tabIconText, { color }]}>📆</Text>
     </View>
   );
 }
@@ -36,13 +48,14 @@ function BookingsIcon({ focused }: { focused: boolean }) {
   );
 }
 
+// ─── Main Tabs ────────────────────────────────────────────────────────────────
+
 function MainTabs() {
   const bookingItems = useAppSelector(state => state.bookings.items);
-  const activeBookings = useMemo(
-    () => bookingItems.filter(b => b.status === 'confirmed'),
+  const badgeCount = useMemo(
+    () => bookingItems.filter(b => b.status === 'confirmed').length,
     [bookingItems],
   );
-  const badgeCount = activeBookings.length;
 
   return (
     <Tab.Navigator
@@ -54,15 +67,29 @@ function MainTabs() {
         tabBarLabelStyle: styles.tabLabel,
       }}
     >
+      {/* ── Doctors List ──────────────────────────────────────────────── */}
       <Tab.Screen
         name="DoctorsTab"
         component={DoctorsListScreen}
         options={{
           tabBarLabel: 'Doctors',
           tabBarIcon: ({ focused }) => <DoctorsIcon focused={focused} />,
-          tabBarButtonTestID: 'tab-DoctorsTab', // ← ADD
+          tabBarButtonTestID: 'tab-DoctorsTab',
         }}
       />
+
+      {/* ── Calendar Booking (NEW) ─────────────────────────────────────── */}
+      <Tab.Screen
+        name="CalendarTab"
+        component={CalendarBookingScreen}
+        options={{
+          tabBarLabel: 'Calendar',
+          tabBarIcon: ({ focused }) => <CalendarIcon focused={focused} />,
+          tabBarButtonTestID: 'tab-CalendarTab',
+        }}
+      />
+
+      {/* ── My Bookings ───────────────────────────────────────────────── */}
       <Tab.Screen
         name="BookingsTab"
         component={MyBookingsScreen}
@@ -71,12 +98,14 @@ function MainTabs() {
           tabBarBadge: badgeCount > 0 ? badgeCount : undefined,
           tabBarBadgeStyle: styles.badge,
           tabBarIcon: ({ focused }) => <BookingsIcon focused={focused} />,
-          tabBarButtonTestID: 'tab-BookingsTab', // ← ADD
+          tabBarButtonTestID: 'tab-BookingsTab',
         }}
       />
     </Tab.Navigator>
   );
 }
+
+// ─── Root Stack ───────────────────────────────────────────────────────────────
 
 export default function AppNavigator() {
   return (
@@ -104,6 +133,8 @@ export default function AppNavigator() {
     </NavigationContainer>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
   tabBar: {

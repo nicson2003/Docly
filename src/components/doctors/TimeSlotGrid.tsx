@@ -152,7 +152,6 @@ export default function TimeSlotGrid({
 
       {/* Slot count header */}
       <View style={styles.slotHeader} testID="slot-count-header">
-        {' '}
         {/* ← ADD testID */}
         <Text style={styles.slotHeaderText}>
           {selectedDay} ·{' '}
