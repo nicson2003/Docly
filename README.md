@@ -111,10 +111,11 @@ the next upcoming calendar date for orientation only — slots recur weekly.
 ---
 
 ## App Usage
-| Select doctor on the list in Doctors list screen |
-| Choose desire date and time |
-| Confirm booking and check it on My Bookings tab, it will also shows number of confirmed bookings as badge |
-| Confirmed bookings can be cancel on My Bookings tab by clicking "Cancel Appointment" then confirm cancellation  |
+
+1. Select doctor on the list in Doctors list screen.
+2. Choose desire date and time.
+3. Confirm booking and check it on My Bookings tab, it will also shows number of confirmed bookings as badge.
+4. Confirmed bookings can be cancel on My Bookings tab by clicking "Cancel Appointment" then confirm cancellation.
 
 ---
 
