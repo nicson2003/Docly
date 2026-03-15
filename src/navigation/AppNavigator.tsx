@@ -60,6 +60,7 @@ function MainTabs() {
         options={{
           tabBarLabel: 'Doctors',
           tabBarIcon: ({ focused }) => <DoctorsIcon focused={focused} />,
+          tabBarButtonTestID: 'tab-DoctorsTab', // ← ADD
         }}
       />
       <Tab.Screen
@@ -70,6 +71,7 @@ function MainTabs() {
           tabBarBadge: badgeCount > 0 ? badgeCount : undefined,
           tabBarBadgeStyle: styles.badge,
           tabBarIcon: ({ focused }) => <BookingsIcon focused={focused} />,
+          tabBarButtonTestID: 'tab-BookingsTab', // ← ADD
         }}
       />
     </Tab.Navigator>
@@ -123,12 +125,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderRadius: 8,
   },
-  tabIconActive: {
-    backgroundColor: Colors.primarySurface,
-  },
-  tabIconText: {
-    fontSize: 18,
-  },
+  tabIconActive: { backgroundColor: Colors.primarySurface },
+  tabIconText: { fontSize: 18 },
   badge: {
     backgroundColor: Colors.error,
     color: Colors.textInverse,

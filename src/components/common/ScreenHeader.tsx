@@ -42,6 +42,7 @@ export default function ScreenHeader({
             onPress={onBack}
             style={styles.backBtn}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+            testID="back-button" // ← ADD
             accessibilityLabel="Go back"
             accessibilityRole="button"
           >
@@ -50,7 +51,6 @@ export default function ScreenHeader({
         ) : (
           <View style={styles.placeholder} />
         )}
-
         <View style={styles.titleBlock}>
           <Text style={styles.title} numberOfLines={1}>
             {title}
@@ -61,7 +61,6 @@ export default function ScreenHeader({
             </Text>
           )}
         </View>
-
         <View style={styles.right}>
           {rightElement ?? <View style={styles.placeholder} />}
         </View>
@@ -78,19 +77,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  elevated: {
-    ...Shadows.sm,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    minHeight: 44,
-  },
-  backBtn: {
-    width: 40,
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-  },
+  elevated: { ...Shadows.sm },
+  row: { flexDirection: 'row', alignItems: 'center', minHeight: 44 },
+  backBtn: { width: 40, alignItems: 'flex-start', justifyContent: 'center' },
   backIcon: {
     fontSize: 34,
     lineHeight: 40,
@@ -98,10 +87,7 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.regular,
     marginTop: Platform.OS === 'android' ? -4 : 0,
   },
-  titleBlock: {
-    flex: 1,
-    alignItems: 'center',
-  },
+  titleBlock: { flex: 1, alignItems: 'center' },
   title: {
     fontSize: Typography.sizes.md,
     fontWeight: Typography.weights.bold,
@@ -112,11 +98,6 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
     marginTop: 2,
   },
-  right: {
-    width: 40,
-    alignItems: 'flex-end',
-  },
-  placeholder: {
-    width: 40,
-  },
+  right: { width: 40, alignItems: 'flex-end' },
+  placeholder: { width: 40 },
 });

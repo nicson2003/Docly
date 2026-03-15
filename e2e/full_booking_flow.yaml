@@ -1,0 +1,77 @@
+# Maestro E2E Flow: Full Booking Journey
+# Run: maestro test .maestro/full_booking_flow.yaml
+#
+# Install Maestro: curl -Ls "https://get.maestro.mobile.dev" | bash
+
+appId: com.docly
+
+---
+# ── Flow 1: View Doctors & Book Appointment ─────────────────────────────────
+- launchApp
+- assertVisible: "Find a Doctor"
+- assertVisible:
+    id: "doctor-card-0"
+- tapOn:
+    id: "doctor-card-0"
+- assertVisible: "Availability"
+- assertVisible: "Weekly Schedule"
+- tapOn:
+    id: "slot-available-0"
+- assertVisible: "Confirm Booking"
+- assertVisible: "30 minutes"
+- tapOn: "Confirm Booking"
+- assertVisible: "Appointment Booked!"
+- assertVisible: "View My Bookings"
+- tapOn: "View My Bookings"
+- assertVisible: "My Bookings"
+- assertVisible:
+    id: "booking-card-0"
+
+---
+# ── Flow 2: Cancel Appointment ───────────────────────────────────────────────
+- launchApp
+- tapOn:
+    id: "tab-BookingsTab"
+- assertVisible: "My Bookings"
+- tapOn: "Cancel Appointment"
+- assertVisible: "Cancel Appointment"  # Alert title
+- tapOn: "Cancel Appointment"           # Alert destructive button
+- assertVisible: "Cancelled"
+
+---
+# ── Flow 3: Double-Booking Prevention ────────────────────────────────────────
+- launchApp
+- tapOn:
+    id: "doctor-card-0"
+- tapOn:
+    id: "slot-available-0"
+- tapOn: "Confirm Booking"
+- assertVisible: "Appointment Booked!"
+- tapOn: "Book Another"
+- tapOn:
+    id: "doctor-card-0"
+- assertVisible: "Booked"
+
+---
+# ── Flow 4: Persistence After Restart ────────────────────────────────────────
+- launchApp
+- tapOn:
+    id: "tab-BookingsTab"
+- assertVisible:
+    id: "booking-card-0"
+- stopApp
+- launchApp
+- tapOn:
+    id: "tab-BookingsTab"
+- assertVisible:
+    id: "booking-card-0"
+
+---
+# ── Flow 5: Filter Tabs ───────────────────────────────────────────────────────
+- launchApp
+- tapOn:
+    id: "tab-BookingsTab"
+- tapOn: "Cancelled"
+- assertVisible: "No cancelled appointments"
+- tapOn: "All"
+- tapOn: "Upcoming"

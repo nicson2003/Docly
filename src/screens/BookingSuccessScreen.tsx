@@ -18,7 +18,6 @@ export default function BookingSuccessScreen() {
   const navigation = useNavigation<Nav>();
   const insets = useSafeAreaInsets();
 
-  // Animations
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(30)).current;
@@ -47,35 +46,19 @@ export default function BookingSuccessScreen() {
     ]).start();
   }, []);
 
-  const handleGoToBookings = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'MainTabs' }],
-    });
-    // Navigate to bookings tab after reset
-    // The tab navigator will handle this via the reset
-  };
-
-  const handleBookAnother = () => {
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'MainTabs' }],
-    });
-  };
+  const handleGoToBookings = () =>
+    navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
+  const handleBookAnother = () =>
+    navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
 
   return (
     <View
-      style={[
-        styles.screen,
-        { paddingBottom: insets.bottom + Spacing.lg },
-      ]}
+      style={[styles.screen, { paddingBottom: insets.bottom + Spacing.lg }]}
     >
       {/* Success circle */}
       <Animated.View
-        style={[
-          styles.successCircle,
-          { transform: [{ scale: scaleAnim }] },
-        ]}
+        style={[styles.successCircle, { transform: [{ scale: scaleAnim }] }]}
+        testID="success-circle" // ← ADD
       >
         <Text style={styles.checkmark}>✓</Text>
       </Animated.View>
@@ -84,17 +67,13 @@ export default function BookingSuccessScreen() {
       <Animated.View
         style={[
           styles.content,
-          {
-            opacity: opacityAnim,
-            transform: [{ translateY: slideAnim }],
-          },
+          { opacity: opacityAnim, transform: [{ translateY: slideAnim }] },
         ]}
       >
         <Text style={styles.title}>Appointment Booked!</Text>
         <Text style={styles.subtitle}>
           Your appointment has been confirmed and saved to your device.
         </Text>
-
         <View style={styles.infoCard}>
           <Text style={styles.infoText}>
             ℹ️ Your booking is stored locally. Slots recur weekly — you'll
@@ -104,9 +83,7 @@ export default function BookingSuccessScreen() {
       </Animated.View>
 
       {/* Actions */}
-      <Animated.View
-        style={[styles.actions, { opacity: opacityAnim }]}
-      >
+      <Animated.View style={[styles.actions, { opacity: opacityAnim }]}>
         <TouchableOpacity
           style={styles.primaryBtn}
           onPress={handleGoToBookings}
@@ -116,7 +93,6 @@ export default function BookingSuccessScreen() {
         >
           <Text style={styles.primaryBtnText}>View My Bookings</Text>
         </TouchableOpacity>
-
         <TouchableOpacity
           style={styles.secondaryBtn}
           onPress={handleBookAnother}
@@ -154,11 +130,7 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.bold,
     lineHeight: 72,
   },
-  content: {
-    alignItems: 'center',
-    gap: Spacing.md,
-    width: '100%',
-  },
+  content: { alignItems: 'center', gap: Spacing.md, width: '100%' },
   title: {
     fontSize: Typography.sizes.xxl,
     fontWeight: Typography.weights.extrabold,
@@ -185,11 +157,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     textAlign: 'center',
   },
-  actions: {
-    width: '100%',
-    gap: Spacing.sm,
-    marginTop: Spacing.xxl,
-  },
+  actions: { width: '100%', gap: Spacing.sm, marginTop: Spacing.xxl },
   primaryBtn: {
     backgroundColor: Colors.primary,
     borderRadius: Radius.lg,
