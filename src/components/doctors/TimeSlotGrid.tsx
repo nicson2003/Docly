@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, memo } from 'react';
 import {
   View,
   Text,
@@ -30,39 +30,45 @@ const DAY_ABBREV: Record<string, string> = {
 interface SlotItemProps {
   slot: TimeSlot;
   isBooked: boolean;
+  slotIndex: number; // ← ADD
   onPress: (slot: TimeSlot) => void;
 }
 
-const SlotItem = memo(({ slot, isBooked, onPress }: SlotItemProps) => (
-  <TouchableOpacity
-    style={[styles.slot, isBooked && styles.slotBooked]}
-    onPress={() => !isBooked && onPress(slot)}
-    disabled={isBooked}
-    activeOpacity={0.7}
-    accessibilityLabel={
-      isBooked
-        ? `${slot.displayStart} – already booked`
-        : `Book ${slot.displayStart} to ${slot.displayEnd}`
-    }
-    accessibilityRole="button"
-    accessibilityState={{ disabled: isBooked }}
-  >
-    <Text style={[styles.slotTime, isBooked && styles.slotTimeBooked]}>
-      {slot.displayStart}
-    </Text>
-    <Text style={[styles.slotDash, isBooked && styles.slotTimeBooked]}>–</Text>
-    <Text style={[styles.slotTime, isBooked && styles.slotTimeBooked]}>
-      {slot.displayEnd}
-    </Text>
-    {isBooked && (
-      <View style={styles.bookedBadge}>
-        <Text style={styles.bookedBadgeText}>Booked</Text>
-      </View>
-    )}
-  </TouchableOpacity>
-));
-
-import { memo } from 'react';
+const SlotItem = memo(
+  ({ slot, isBooked, slotIndex, onPress }: SlotItemProps) => (
+    <TouchableOpacity
+      style={[styles.slot, isBooked && styles.slotBooked]}
+      onPress={() => !isBooked && onPress(slot)}
+      disabled={isBooked}
+      activeOpacity={0.7}
+      testID={
+        isBooked ? `slot-booked-${slotIndex}` : `slot-available-${slotIndex}`
+      } // ← ADD
+      accessibilityLabel={
+        isBooked
+          ? `${slot.displayStart} – already booked`
+          : `Book ${slot.displayStart} to ${slot.displayEnd}`
+      }
+      accessibilityRole="button"
+      accessibilityState={{ disabled: isBooked }}
+    >
+      <Text style={[styles.slotTime, isBooked && styles.slotTimeBooked]}>
+        {slot.displayStart}
+      </Text>
+      <Text style={[styles.slotDash, isBooked && styles.slotTimeBooked]}>
+        –
+      </Text>
+      <Text style={[styles.slotTime, isBooked && styles.slotTimeBooked]}>
+        {slot.displayEnd}
+      </Text>
+      {isBooked && (
+        <View style={styles.bookedBadge}>
+          <Text style={styles.bookedBadgeText}>Booked</Text>
+        </View>
+      )}
+    </TouchableOpacity>
+  ),
+);
 
 export default function TimeSlotGrid({
   schedule,
@@ -70,26 +76,23 @@ export default function TimeSlotGrid({
   onSlotPress,
 }: Props) {
   const [selectedDay, setSelectedDay] = useState<DayOfWeek>(
-    schedule[0]?.day ?? 'Monday'
+    schedule[0]?.day ?? 'Monday',
   );
 
   const selectedSchedule = useMemo(
-    () => schedule.find((s) => s.day === selectedDay),
-    [schedule, selectedDay]
+    () => schedule.find(s => s.day === selectedDay),
+    [schedule, selectedDay],
   );
 
   const handleSlotPress = useCallback(
-    (slot: TimeSlot) => {
-      onSlotPress(slot, selectedDay);
-    },
-    [onSlotPress, selectedDay]
+    (slot: TimeSlot) => onSlotPress(slot, selectedDay),
+    [onSlotPress, selectedDay],
   );
 
   const availableCount = useMemo(
     () =>
-      selectedSchedule?.slots.filter((s) => !bookedSlotIds.has(s.id)).length ??
-      0,
-    [selectedSchedule, bookedSlotIds]
+      selectedSchedule?.slots.filter(s => !bookedSlotIds.has(s.id)).length ?? 0,
+    [selectedSchedule, bookedSlotIds],
   );
 
   return (
@@ -101,13 +104,13 @@ export default function TimeSlotGrid({
         style={styles.dayScroll}
         contentContainerStyle={styles.dayScrollContent}
       >
-        {schedule.map((daySchedule) => {
+        {schedule.map((daySchedule, dayIndex) => {
           const isSelected = daySchedule.day === selectedDay;
           const date = getNextDateForDay(daySchedule.day);
           const dateNum = date.getDate();
           const monthStr = date.toLocaleDateString('en-AU', { month: 'short' });
-          const bookedInDay = daySchedule.slots.filter((s) =>
-            bookedSlotIds.has(s.id)
+          const bookedInDay = daySchedule.slots.filter(s =>
+            bookedSlotIds.has(s.id),
           ).length;
           const availInDay = daySchedule.slots.length - bookedInDay;
 
@@ -117,15 +120,13 @@ export default function TimeSlotGrid({
               style={[styles.dayTab, isSelected && styles.dayTabSelected]}
               onPress={() => setSelectedDay(daySchedule.day)}
               activeOpacity={0.7}
+              testID={`day-tab-${dayIndex}`} // ← ADD
               accessibilityLabel={`${daySchedule.day}, ${availInDay} slots available`}
               accessibilityRole="tab"
               accessibilityState={{ selected: isSelected }}
             >
               <Text
-                style={[
-                  styles.dayAbbrev,
-                  isSelected && styles.dayTextSelected,
-                ]}
+                style={[styles.dayAbbrev, isSelected && styles.dayTextSelected]}
               >
                 {DAY_ABBREV[daySchedule.day]}
               </Text>
@@ -135,19 +136,13 @@ export default function TimeSlotGrid({
                 {dateNum}
               </Text>
               <Text
-                style={[
-                  styles.dayMonth,
-                  isSelected && styles.dayMonthSelected,
-                ]}
+                style={[styles.dayMonth, isSelected && styles.dayMonthSelected]}
               >
                 {monthStr}
               </Text>
               {availInDay > 0 && (
                 <View
-                  style={[
-                    styles.dayDot,
-                    isSelected && styles.dayDotSelected,
-                  ]}
+                  style={[styles.dayDot, isSelected && styles.dayDotSelected]}
                 />
               )}
             </TouchableOpacity>
@@ -156,7 +151,9 @@ export default function TimeSlotGrid({
       </ScrollView>
 
       {/* Slot count header */}
-      <View style={styles.slotHeader}>
+      <View style={styles.slotHeader} testID="slot-count-header">
+        {' '}
+        {/* ← ADD testID */}
         <Text style={styles.slotHeaderText}>
           {selectedDay} ·{' '}
           <Text style={styles.slotHeaderCount}>
@@ -169,15 +166,18 @@ export default function TimeSlotGrid({
       {selectedSchedule ? (
         <FlatList
           data={selectedSchedule.slots}
-          keyExtractor={(item) => item.id}
+          keyExtractor={item => item.id}
           numColumns={2}
           scrollEnabled={false}
           contentContainerStyle={styles.slotsGrid}
           columnWrapperStyle={styles.slotRow}
-          renderItem={({ item }) => (
+          renderItem={(
+            { item, index }, // ← ADD index
+          ) => (
             <SlotItem
               slot={item}
               isBooked={bookedSlotIds.has(item.id)}
+              slotIndex={index} // ← ADD
               onPress={handleSlotPress}
             />
           )}
@@ -193,13 +193,8 @@ export default function TimeSlotGrid({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  // Day tabs
-  dayScroll: {
-    flexGrow: 0,
-  },
+  container: { flex: 1 },
+  dayScroll: { flexGrow: 0 },
   dayScrollContent: {
     paddingHorizontal: Spacing.base,
     paddingVertical: Spacing.md,
@@ -237,12 +232,8 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     fontWeight: Typography.weights.medium,
   },
-  dayTextSelected: {
-    color: Colors.textInverse,
-  },
-  dayMonthSelected: {
-    color: 'rgba(255,255,255,0.75)',
-  },
+  dayTextSelected: { color: Colors.textInverse },
+  dayMonthSelected: { color: 'rgba(255,255,255,0.75)' },
   dayDot: {
     width: 6,
     height: 6,
@@ -250,14 +241,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.accent,
     marginTop: 3,
   },
-  dayDotSelected: {
-    backgroundColor: 'rgba(255,255,255,0.8)',
-  },
-  // Slot header
-  slotHeader: {
-    paddingHorizontal: Spacing.base,
-    paddingBottom: Spacing.sm,
-  },
+  dayDotSelected: { backgroundColor: 'rgba(255,255,255,0.8)' },
+  slotHeader: { paddingHorizontal: Spacing.base, paddingBottom: Spacing.sm },
   slotHeaderText: {
     fontSize: Typography.sizes.sm,
     color: Colors.textSecondary,
@@ -267,15 +252,8 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontWeight: Typography.weights.semibold,
   },
-  // Slot grid
-  slotsGrid: {
-    paddingHorizontal: Spacing.base,
-    paddingBottom: Spacing.xxl,
-  },
-  slotRow: {
-    gap: Spacing.sm,
-    marginBottom: Spacing.sm,
-  },
+  slotsGrid: { paddingHorizontal: Spacing.base, paddingBottom: Spacing.xxl },
+  slotRow: { gap: Spacing.sm, marginBottom: Spacing.sm },
   slot: {
     flex: 1,
     backgroundColor: Colors.surface,
@@ -297,13 +275,8 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.semibold,
     color: Colors.textPrimary,
   },
-  slotDash: {
-    fontSize: Typography.sizes.xs,
-    color: Colors.textTertiary,
-  },
-  slotTimeBooked: {
-    color: Colors.textDisabled,
-  },
+  slotDash: { fontSize: Typography.sizes.xs, color: Colors.textTertiary },
+  slotTimeBooked: { color: Colors.textDisabled },
   bookedBadge: {
     marginTop: Spacing.xs,
     backgroundColor: Colors.errorLight,

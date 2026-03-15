@@ -41,9 +41,7 @@ export default function MyBookingsScreen() {
   );
 
   const handleCancel = useCallback(
-    (bookingId: string) => {
-      dispatch(cancelBooking(bookingId));
-    },
+    (bookingId: string) => dispatch(cancelBooking(bookingId)),
     [dispatch],
   );
 
@@ -58,12 +56,11 @@ export default function MyBookingsScreen() {
       <FlatList
         data={filteredBookings}
         keyExtractor={item => item.id}
-        renderItem={({ item }: { item: Booking }) => (
-          <BookingCard booking={item} onCancel={handleCancel} />
+        renderItem={({ item, index }: { item: Booking; index: number }) => (
+          <BookingCard booking={item} index={index} onCancel={handleCancel} />
         )}
         ListHeaderComponent={
           <View>
-            {/* Header */}
             <View
               style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}
             >
@@ -81,8 +78,6 @@ export default function MyBookingsScreen() {
                 </View>
               </View>
             </View>
-
-            {/* Filter tabs */}
             <View style={styles.filterRow}>
               {FILTERS.map(f => (
                 <TouchableOpacity
@@ -156,10 +151,7 @@ export default function MyBookingsScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+  screen: { flex: 1, backgroundColor: Colors.background },
   header: {
     backgroundColor: Colors.primaryDark,
     paddingHorizontal: Spacing.base,
@@ -227,9 +219,7 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.medium,
     color: Colors.textSecondary,
   },
-  filterTextActive: {
-    color: Colors.textInverse,
-  },
+  filterTextActive: { color: Colors.textInverse },
   filterBadge: {
     backgroundColor: Colors.borderLight,
     borderRadius: 10,
@@ -238,21 +228,13 @@ const styles = StyleSheet.create({
     minWidth: 20,
     alignItems: 'center',
   },
-  filterBadgeActive: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-  },
+  filterBadgeActive: { backgroundColor: 'rgba(255,255,255,0.25)' },
   filterBadgeText: {
     fontSize: 11,
     fontWeight: Typography.weights.bold,
     color: Colors.textSecondary,
   },
-  filterBadgeTextActive: {
-    color: Colors.textInverse,
-  },
-  listContent: {
-    paddingBottom: Spacing.xxxl,
-  },
-  emptyContent: {
-    flexGrow: 1,
-  },
+  filterBadgeTextActive: { color: Colors.textInverse },
+  listContent: { paddingBottom: Spacing.xxxl },
+  emptyContent: { flexGrow: 1 },
 });

@@ -62,6 +62,7 @@ const doctorsSlice = createSlice({
         state.loading = false;
         state.items = action.payload;
         state.lastFetched = new Date().toISOString();
+        state.error = null;
       })
       .addCase(fetchDoctors.rejected, (state, action) => {
         state.loading = false;

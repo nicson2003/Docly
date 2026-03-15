@@ -1,11 +1,5 @@
 import React, { memo } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Booking } from '../../types';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../theme';
 import DoctorAvatar from '../common/DoctorAvatar';
@@ -13,10 +7,11 @@ import { getAvatarColor, getInitials, formatBookingDate } from '../../utils';
 
 interface Props {
   booking: Booking;
+  index: number; // ← ADD
   onCancel: (bookingId: string) => void;
 }
 
-function BookingCard({ booking, onCancel }: Props) {
+function BookingCard({ booking, index, onCancel }: Props) {
   const isCancelled = booking.status === 'cancelled';
   const avatarColor = getAvatarColor(booking.doctorName);
   const initials = getInitials(booking.doctorName);
@@ -33,20 +28,21 @@ function BookingCard({ booking, onCancel }: Props) {
           style: 'destructive',
           onPress: () => onCancel(booking.id),
         },
-      ]
+      ],
     );
   };
 
   return (
-    <View style={[styles.card, isCancelled && styles.cardCancelled]}>
-      {/* Status bar */}
+    <View
+      style={[styles.card, isCancelled && styles.cardCancelled]}
+      testID={`booking-card-${index}`} // ← ADD
+    >
       <View
         style={[
           styles.statusBar,
           { backgroundColor: isCancelled ? Colors.textDisabled : avatarColor },
         ]}
       />
-
       <View style={styles.body}>
         {/* Top row */}
         <View style={styles.topRow}>
@@ -73,7 +69,9 @@ function BookingCard({ booking, onCancel }: Props) {
             <Text
               style={[
                 styles.statusText,
-                isCancelled ? styles.statusTextCancelled : styles.statusTextConfirmed,
+                isCancelled
+                  ? styles.statusTextCancelled
+                  : styles.statusTextConfirmed,
               ]}
             >
               {isCancelled ? 'Cancelled' : '✓ Confirmed'}
@@ -81,7 +79,6 @@ function BookingCard({ booking, onCancel }: Props) {
           </View>
         </View>
 
-        {/* Divider */}
         <View style={styles.divider} />
 
         {/* Time details */}
@@ -101,7 +98,6 @@ function BookingCard({ booking, onCancel }: Props) {
           </View>
         </View>
 
-        {/* Booked on */}
         <Text style={styles.bookedOn}>
           Booked on {formatBookingDate(booking.bookedAt)}
         </Text>
@@ -144,69 +140,34 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Shadows.sm,
   },
-  cardCancelled: {
-    opacity: 0.65,
-  },
-  statusBar: {
-    width: 4,
-  },
-  body: {
-    flex: 1,
-    padding: Spacing.base,
-    gap: Spacing.sm,
-  },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.sm,
-  },
-  doctorInfo: {
-    flex: 1,
-    gap: 2,
-  },
+  cardCancelled: { opacity: 0.65 },
+  statusBar: { width: 4 },
+  body: { flex: 1, padding: Spacing.base, gap: Spacing.sm },
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  doctorInfo: { flex: 1, gap: 2 },
   doctorName: {
     fontSize: Typography.sizes.base,
     fontWeight: Typography.weights.semibold,
     color: Colors.textPrimary,
   },
-  timezone: {
-    fontSize: Typography.sizes.xs,
-    color: Colors.textTertiary,
-  },
+  timezone: { fontSize: Typography.sizes.xs, color: Colors.textTertiary },
   statusBadge: {
     borderRadius: Radius.full,
     paddingHorizontal: Spacing.sm,
     paddingVertical: 3,
   },
-  statusConfirmed: {
-    backgroundColor: Colors.successLight,
-  },
-  statusCancelled: {
-    backgroundColor: Colors.borderLight,
-  },
+  statusConfirmed: { backgroundColor: Colors.successLight },
+  statusCancelled: { backgroundColor: Colors.borderLight },
   statusText: {
     fontSize: Typography.sizes.xs,
     fontWeight: Typography.weights.semibold,
   },
   statusTextConfirmed: { color: Colors.successDark },
   statusTextCancelled: { color: Colors.textTertiary },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.divider,
-  },
-  timeRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  timeBlock: {
-    flex: 1,
-    gap: 2,
-  },
-  timeSep: {
-    width: 1,
-    backgroundColor: Colors.divider,
-    alignSelf: 'stretch',
-  },
+  divider: { height: 1, backgroundColor: Colors.divider },
+  timeRow: { flexDirection: 'row', gap: Spacing.md },
+  timeBlock: { flex: 1, gap: 2 },
+  timeSep: { width: 1, backgroundColor: Colors.divider, alignSelf: 'stretch' },
   timeLabel: {
     fontSize: Typography.sizes.xs,
     color: Colors.textTertiary,
@@ -219,13 +180,8 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.semibold,
     color: Colors.textPrimary,
   },
-  textMuted: {
-    color: Colors.textTertiary,
-  },
-  bookedOn: {
-    fontSize: Typography.sizes.xs,
-    color: Colors.textTertiary,
-  },
+  textMuted: { color: Colors.textTertiary },
+  bookedOn: { fontSize: Typography.sizes.xs, color: Colors.textTertiary },
   offlineBadge: {
     backgroundColor: Colors.warningLight,
     borderRadius: Radius.sm,

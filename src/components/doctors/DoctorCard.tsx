@@ -1,23 +1,19 @@
 import React, { memo } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Doctor } from '../../types';
 import { Colors, Typography, Spacing, Radius, Shadows } from '../../theme';
 import DoctorAvatar from '../common/DoctorAvatar';
 
 interface Props {
   doctor: Doctor;
+  index: number; // ← ADD: pass index from FlatList renderItem
   onPress: (doctorId: string) => void;
 }
 
-function DoctorCard({ doctor, onPress }: Props) {
+function DoctorCard({ doctor, index, onPress }: Props) {
   const totalSlots = doctor.schedule.reduce(
     (sum, d) => sum + d.slots.length,
-    0
+    0,
   );
   const availableDays = doctor.schedule.length;
   const tzLabel = doctor.timezone.replace('Australia/', '');
@@ -27,34 +23,39 @@ function DoctorCard({ doctor, onPress }: Props) {
       style={styles.card}
       onPress={() => onPress(doctor.id)}
       activeOpacity={0.75}
+      testID={`doctor-card-${index}`} // ← ADD
       accessibilityLabel={`View availability for ${doctor.name}`}
       accessibilityRole="button"
     >
-      {/* Left accent bar */}
       <View style={[styles.accent, { backgroundColor: doctor.avatarColor }]} />
-
       <View style={styles.body}>
         <DoctorAvatar
           initials={doctor.initials}
           color={doctor.avatarColor}
           size={52}
         />
-
         <View style={styles.info}>
-          <Text style={styles.name} numberOfLines={1}>
+          <Text
+            style={styles.name}
+            numberOfLines={1}
+            testID="doctor-card-name" // ← ADD
+          >
             {doctor.name}
           </Text>
           <View style={styles.metaRow}>
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>🗓 {availableDays} day{availableDays !== 1 ? 's' : ''}</Text>
+              <Text style={styles.badgeText}>
+                🗓 {availableDays} day{availableDays !== 1 ? 's' : ''}
+              </Text>
             </View>
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>⏰ {totalSlots} slots</Text>
+              <Text style={styles.badgeText}>
+                ⏰ {totalSlots} slot{totalSlots !== 1 ? 's' : ''}
+              </Text>
             </View>
           </View>
           <Text style={styles.tz}>📍 {tzLabel} time</Text>
         </View>
-
         <Text style={styles.chevron}>›</Text>
       </View>
     </TouchableOpacity>
@@ -73,9 +74,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...Shadows.sm,
   },
-  accent: {
-    width: 4,
-  },
+  accent: { width: 4 },
   body: {
     flex: 1,
     flexDirection: 'row',
@@ -83,20 +82,13 @@ const styles = StyleSheet.create({
     padding: Spacing.base,
     gap: Spacing.md,
   },
-  info: {
-    flex: 1,
-    gap: Spacing.xs,
-  },
+  info: { flex: 1, gap: Spacing.xs },
   name: {
     fontSize: Typography.sizes.md,
     fontWeight: Typography.weights.semibold,
     color: Colors.textPrimary,
   },
-  metaRow: {
-    flexDirection: 'row',
-    gap: Spacing.xs,
-    flexWrap: 'wrap',
-  },
+  metaRow: { flexDirection: 'row', gap: Spacing.xs, flexWrap: 'wrap' },
   badge: {
     backgroundColor: Colors.primarySurface,
     borderRadius: Radius.full,
@@ -108,13 +100,6 @@ const styles = StyleSheet.create({
     color: Colors.primaryDark,
     fontWeight: Typography.weights.medium,
   },
-  tz: {
-    fontSize: Typography.sizes.xs,
-    color: Colors.textTertiary,
-  },
-  chevron: {
-    fontSize: 26,
-    color: Colors.textTertiary,
-    lineHeight: 30,
-  },
+  tz: { fontSize: Typography.sizes.xs, color: Colors.textTertiary },
+  chevron: { fontSize: 26, color: Colors.textTertiary, lineHeight: 30 },
 });

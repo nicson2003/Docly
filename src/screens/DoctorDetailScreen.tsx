@@ -59,7 +59,6 @@ export default function DoctorDetailScreen() {
   const bookedCount = bookedSlotIds.size;
   const availableCount = totalSlots - bookedCount;
 
-  console.log('test->', doctor.schedule);
   return (
     <View style={styles.screen}>
       <ScreenHeader
@@ -68,7 +67,6 @@ export default function DoctorDetailScreen() {
         onBack={() => navigation.goBack()}
         elevated
       />
-
       <ScrollView
         showsVerticalScrollIndicator={false}
         stickyHeaderIndices={[1]}
@@ -81,7 +79,12 @@ export default function DoctorDetailScreen() {
             size={72}
           />
           <View style={styles.profileInfo}>
-            <Text style={styles.doctorName}>{doctor.name}</Text>
+            <Text
+              style={styles.doctorName}
+              testID="doctor-name" // ← ADD
+            >
+              {doctor.name}
+            </Text>
             <Text style={styles.timezone}>📍 {tzLabel} timezone</Text>
             <View style={styles.statsRow}>
               <StatChip
@@ -113,7 +116,6 @@ export default function DoctorDetailScreen() {
           </Text>
         </View>
 
-        {/* Calendar grid */}
         {doctor.schedule.length > 0 ? (
           <TimeSlotGrid
             schedule={doctor.schedule}
@@ -150,10 +152,7 @@ function StatChip({
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+  screen: { flex: 1, backgroundColor: Colors.background },
   profileCard: {
     backgroundColor: Colors.surface,
     margin: Spacing.base,
@@ -163,19 +162,13 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: Spacing.base,
   },
-  profileInfo: {
-    flex: 1,
-    gap: Spacing.xs,
-  },
+  profileInfo: { flex: 1, gap: Spacing.xs },
   doctorName: {
     fontSize: Typography.sizes.lg,
     fontWeight: Typography.weights.bold,
     color: Colors.textPrimary,
   },
-  timezone: {
-    fontSize: Typography.sizes.sm,
-    color: Colors.textSecondary,
-  },
+  timezone: { fontSize: Typography.sizes.sm, color: Colors.textSecondary },
   statsRow: {
     flexDirection: 'row',
     gap: Spacing.xs,
@@ -195,10 +188,7 @@ const styles = StyleSheet.create({
     fontSize: Typography.sizes.sm,
     fontWeight: Typography.weights.bold,
   },
-  statLabel: {
-    fontSize: Typography.sizes.xs,
-    color: Colors.textTertiary,
-  },
+  statLabel: { fontSize: Typography.sizes.xs, color: Colors.textTertiary },
   sectionHeader: {
     backgroundColor: Colors.background,
     paddingHorizontal: Spacing.base,

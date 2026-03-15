@@ -26,7 +26,6 @@ export default function DoctorsListScreen() {
   const navigation = useNavigation<Nav>();
   const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
-
   const { items: doctors, loading, error } = useAppSelector(s => s.doctors);
 
   useEffect(() => {
@@ -39,9 +38,7 @@ export default function DoctorsListScreen() {
   }, [dispatch]);
 
   const handleDoctorPress = useCallback(
-    (doctorId: string) => {
-      navigation.navigate('DoctorDetail', { doctorId });
-    },
+    (doctorId: string) => navigation.navigate('DoctorDetail', { doctorId }),
     [navigation],
   );
 
@@ -70,10 +67,17 @@ export default function DoctorsListScreen() {
   return (
     <View style={styles.screen}>
       <FlatList
+        testID="doctors-list" // ← ADD
         data={doctors}
         keyExtractor={item => item.id}
-        renderItem={({ item }) => (
-          <DoctorCard doctor={item} onPress={handleDoctorPress} />
+        renderItem={(
+          { item, index }, // ← ADD index
+        ) => (
+          <DoctorCard
+            doctor={item}
+            index={index} // ← ADD
+            onPress={handleDoctorPress}
+          />
         )}
         ListHeaderComponent={
           <View
@@ -133,10 +137,7 @@ function HeaderContent() {
 }
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+  screen: { flex: 1, backgroundColor: Colors.background },
   header: {
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.base,
@@ -177,21 +178,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  logoEmoji: {
-    fontSize: 26,
-  },
+  logoEmoji: { fontSize: 26 },
   sectionTitle: {
     fontSize: Typography.sizes.sm,
     fontWeight: Typography.weights.semibold,
     color: 'rgba(255,255,255,0.85)',
     marginTop: Spacing.xs,
   },
-  listContent: {
-    paddingBottom: Spacing.xxxl,
-  },
-  emptyContent: {
-    flexGrow: 1,
-  },
+  listContent: { paddingBottom: Spacing.xxxl },
+  emptyContent: { flexGrow: 1 },
   errorBanner: {
     backgroundColor: 'rgba(239,68,68,0.15)',
     borderRadius: 10,

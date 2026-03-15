@@ -1,0 +1,201 @@
+# Maestro E2E Flow: Full Booking Journey
+# Run: maestro test e2e/full_booking_flow.yaml
+#
+# Bundle ID: com.shiftcare.docly
+
+appId: com.shiftcare.docly
+
+---
+# ── Flow 1: View Doctors & Book Appointment ──────────────────────────────────
+- launchApp:
+    appId: com.shiftcare.docly
+    clearState: true
+
+# Wait for the app and API to fully load before asserting anything
+#- waitForAnimationToEnd:
+#    timeout: 10000
+
+# The header always renders; waiting on it confirms the screen is ready
+- assertVisible:
+    text: "Find a Doctor"
+    timeout: 10000
+
+# Wait for at least one doctor card to appear (API fetch completes)
+- assertVisible:
+    id: "doctor-card-0"
+    timeout: 10000
+
+- tapOn:
+    id: "doctor-card-0"
+
+- assertVisible:
+    text: "Availability"
+    timeout: 5000
+
+- assertVisible:
+    text: "Weekly Schedule"
+    timeout: 5000
+
+# Wait for slots to render before tapping
+- assertVisible:
+    id: "slot-available-0"
+    timeout: 5000
+
+- tapOn:
+    id: "slot-available-0"
+
+- assertVisible:
+    text: "Confirm Booking"
+    timeout: 5000
+
+- assertVisible:
+    text: "30 minutes"
+    timeout: 5000
+
+- tapOn: "Confirm Booking"
+
+- assertVisible:
+    text: "Appointment Booked!"
+    timeout: 5000
+
+- assertVisible:
+    text: "View My Bookings"
+    timeout: 5000
+
+- tapOn: "View My Bookings"
+
+- assertVisible:
+    text: "My Bookings"
+    timeout: 5000
+
+- assertVisible:
+    id: "booking-card-0"
+    timeout: 5000
+
+---
+# ── Flow 2: Cancel Appointment ───────────────────────────────────────────────
+- launchApp:
+    appId: com.shiftcare.docly
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+- tapOn:
+    id: "tab-BookingsTab"
+
+- assertVisible:
+    text: "My Bookings"
+    timeout: 5000
+
+- assertVisible:
+    id: "booking-card-0"
+    timeout: 5000
+
+- tapOn: "Cancel Appointment"
+
+- assertVisible:
+    text: "Cancel Appointment"
+    timeout: 3000
+
+- tapOn: "Cancel Appointment"
+
+- assertVisible:
+    text: "Cancelled"
+    timeout: 5000
+
+---
+# ── Flow 3: Double-Booking Prevention ────────────────────────────────────────
+- launchApp:
+    appId: com.shiftcare.docly
+    clearState: true
+
+- waitForAnimationToEnd:
+    timeout: 10000
+
+- assertVisible:
+    id: "doctor-card-0"
+    timeout: 15000
+
+- tapOn:
+    id: "doctor-card-0"
+
+- assertVisible:
+    id: "slot-available-0"
+    timeout: 5000
+
+- tapOn:
+    id: "slot-available-0"
+
+- tapOn: "Confirm Booking"
+
+- assertVisible:
+    text: "Appointment Booked!"
+    timeout: 5000
+
+- tapOn: "Book Another"
+
+- assertVisible:
+    id: "doctor-card-0"
+    timeout: 10000
+
+- tapOn:
+    id: "doctor-card-0"
+
+- assertVisible:
+    text: "Booked"
+    timeout: 5000
+
+---
+# ── Flow 4: Persistence After Restart ────────────────────────────────────────
+- launchApp:
+    appId: com.shiftcare.docly
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+- tapOn:
+    id: "tab-BookingsTab"
+
+- assertVisible:
+    id: "booking-card-0"
+    timeout: 5000
+
+- stopApp
+
+- launchApp:
+    appId: com.shiftcare.docly
+
+- waitForAnimationToEnd:
+    timeout: 10000
+
+- tapOn:
+    id: "tab-BookingsTab"
+
+- assertVisible:
+    id: "booking-card-0"
+    timeout: 5000
+
+---
+# ── Flow 5: Filter Tabs ───────────────────────────────────────────────────────
+- launchApp:
+    appId: com.shiftcare.docly
+
+- waitForAnimationToEnd:
+    timeout: 5000
+
+- tapOn:
+    id: "tab-BookingsTab"
+
+- assertVisible:
+    text: "My Bookings"
+    timeout: 5000
+
+- tapOn: "Cancelled"
+
+- assertVisible:
+    text: "No cancelled appointments"
+    timeout: 3000
+
+- tapOn: "All"
+
+- tapOn: "Upcoming"
