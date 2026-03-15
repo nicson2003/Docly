@@ -129,6 +129,7 @@ the next upcoming calendar date for orientation only — slots recur weekly.
 - No push notifications or reminders
 
 ### Future Enhancements (prioritised)
+
 1. **Backend booking API** — POST bookings server-side with optimistic UI
 2. **Authentication** — OAuth/magic link for cross-device sync
 3. **DST-aware scheduling** — `Intl.DateTimeFormat` with real UTC offsets
@@ -137,8 +138,10 @@ the next upcoming calendar date for orientation only — slots recur weekly.
 6. **Offline doctor cache** — Persist last-fetched doctors to AsyncStorage
 7. **Search & filter** — Filter by timezone, specialty, or available day
 8. **Reschedule flow** — Change rather than cancel + rebook
-9. **E2E testing** — Maestro or Detox flows for critical paths
+9. **E2E testing** — Fix Maestro or Detox flows for critical paths
 10. **FlashList** — Replace FlatList for better large-list performance
-11. **Add AI Booking Assistant** - implement "aba" an ai booking assistant" that can suggest specific physician/specialist depends on patients symptoms.
+11. **Add AI Booking Assistant** - Implement "aba" an ai booking assistant" that can suggest specific physician/specialist depends on patients symptoms.
 And also able to explain patient condition from Stable, Fair, Serious, Critical, and Undetermined.
-12. **Add AI Early Diagnostic** - for subscription only. implement early diagnostic for serious and critical patient by scanning facial reactions and eye movements, and analyzing data from their smart watches ex: hearth rate & rhythm, blood oxygen saturation, sleep tracking, blood pressure, physical activities and other data.
+12. **Add AI Early Diagnostic** - For subscription only. implement early diagnostic for serious and critical patient by scanning facial reactions and eye movements, and analyzing data from their smart watches ex: hearth rate & rhythm, blood oxygen saturation, sleep tracking, blood pressure, physical activities and other data.
+13. **Add Localization** - Handle at least 3-5 major languages.
+14. **Dark/Mode** - Handle dark/light mode and other config such as bigger font for patient with poor eyesight.
