@@ -98,5 +98,6 @@ export type RootStackParamList = {
 
 export type BottomTabParamList = {
   DoctorsTab: undefined;
+  CalendarTab: undefined;
   BookingsTab: undefined;
 };
