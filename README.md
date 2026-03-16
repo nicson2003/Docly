@@ -47,7 +47,7 @@ npm run type-check      # TypeScript check
 ## Project Structure
 
 ```
-ShiftCareApp/
+Docly/
 ├── App.tsx
 ├── src/
 │   ├── types/index.ts
