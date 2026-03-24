@@ -31,6 +31,7 @@ import {
   getAvatarColor,
   minutesToDisplay,
   DAY_ORDER,
+  extractTimezones,
 } from '../utils';
 import TimezoneFilter, {
   timezoneLabel,
@@ -405,11 +406,7 @@ export default function CalendarBookingScreen() {
   const doctorsAnim = useRef(new Animated.Value(0)).current;
 
   // Unique sorted timezones
-  const timezones = useMemo(() => {
-    const tzSet = new Set<string>();
-    allDoctors.forEach(d => tzSet.add(d.timezone));
-    return Array.from(tzSet).sort();
-  }, [allDoctors]);
+  const timezones = useMemo(() => extractTimezones(allDoctors), [allDoctors]);
 
   // Doctors after timezone filter
   const doctors = useMemo(() => {

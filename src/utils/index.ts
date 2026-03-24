@@ -267,3 +267,16 @@ export function formatBookingDate(isoString: string): string {
 export function generateBookingId(): string {
   return `booking_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
+
+// Utility to extract unique, sorted timezones from doctors or any dataset
+export function extractTimezones<T extends { timezone?: string }>(items: T[]): string[] {
+  if (!items || items.length === 0) return [];
+
+  const tzList = items.map(d => d.timezone || "Unknown");
+  return [...new Set(tzList)].sort();
+}
+
+// Optional: label formatter
+export function timezoneLabel(tz: string): string {
+  return tz.replace("Australia/", "").replace("_", " ");
+}

@@ -22,6 +22,7 @@ import EmptyState from '../components/common/EmptyState';
 import TimezoneFilter, {
   timezoneLabel,
 } from '../components/common/TimezoneFilter';
+import { extractTimezones } from '../utils';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'MainTabs'>;
 
@@ -47,12 +48,7 @@ export default function DoctorsListScreen() {
     [navigation],
   );
 
-  // Build unique sorted timezone list from loaded doctors
-  const timezones = useMemo(() => {
-    const tzSet = new Set<string>();
-    doctors.forEach(d => tzSet.add(d.timezone));
-    return Array.from(tzSet).sort();
-  }, [doctors]);
+  const timezones = useMemo(() => extractTimezones(doctors), [doctors]);
 
   // Filter doctors by selected timezone
   const filteredDoctors = useMemo(() => {
