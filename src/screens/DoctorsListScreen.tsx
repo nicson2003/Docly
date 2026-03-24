@@ -1,4 +1,4 @@
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useMemo, useState } from 'react';
 import {
   View,
   FlatList,
@@ -14,11 +14,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { RootStackParamList } from '../types';
 import { useAppDispatch, useAppSelector } from '../hooks/useRedux';
 import { fetchDoctors, clearError } from '../store/slices/doctorsSlice';
-import { Colors, Typography, Spacing } from '../theme';
+import { Colors, Typography, Spacing, Radius } from '../theme';
 import DoctorCard from '../components/doctors/DoctorCard';
 import LoadingState from '../components/common/LoadingState';
 import ErrorState from '../components/common/ErrorState';
 import EmptyState from '../components/common/EmptyState';
+import TimezoneFilter, {
+  timezoneLabel,
+} from '../components/common/TimezoneFilter';
 
 type Nav = NativeStackNavigationProp<RootStackParamList, 'MainTabs'>;
 
@@ -27,6 +30,8 @@ export default function DoctorsListScreen() {
   const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
   const { items: doctors, loading, error } = useAppSelector(s => s.doctors);
+
+  const [selectedTimezone, setSelectedTimezone] = useState<string | null>(null);
 
   useEffect(() => {
     dispatch(fetchDoctors());
@@ -41,6 +46,19 @@ export default function DoctorsListScreen() {
     (doctorId: string) => navigation.navigate('DoctorDetail', { doctorId }),
     [navigation],
   );
+
+  // Build unique sorted timezone list from loaded doctors
+  const timezones = useMemo(() => {
+    const tzSet = new Set<string>();
+    doctors.forEach(d => tzSet.add(d.timezone));
+    return Array.from(tzSet).sort();
+  }, [doctors]);
+
+  // Filter doctors by selected timezone
+  const filteredDoctors = useMemo(() => {
+    if (!selectedTimezone) return doctors;
+    return doctors.filter(d => d.timezone === selectedTimezone);
+  }, [doctors, selectedTimezone]);
 
   if (loading && doctors.length === 0) {
     return (
@@ -67,41 +85,54 @@ export default function DoctorsListScreen() {
   return (
     <View style={styles.screen}>
       <FlatList
-        testID="doctors-list" // ← ADD
-        data={doctors}
+        testID="doctors-list"
+        data={filteredDoctors}
         keyExtractor={item => item.id}
-        renderItem={(
-          { item, index }, // ← ADD index
-        ) => (
-          <DoctorCard
-            doctor={item}
-            index={index} // ← ADD
-            onPress={handleDoctorPress}
-          />
+        renderItem={({ item, index }) => (
+          <DoctorCard doctor={item} index={index} onPress={handleDoctorPress} />
         )}
         ListHeaderComponent={
-          <View
-            style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}
-          >
-            <HeaderContent />
-            {error && (
-              <View style={styles.errorBanner}>
-                <Text style={styles.errorBannerText}>⚠️ {error}</Text>
-                <TouchableOpacity onPress={handleRefresh}>
-                  <Text style={styles.retryInline}>Retry</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-            <Text style={styles.sectionTitle}>
-              {doctors.length} Doctor{doctors.length !== 1 ? 's' : ''} Available
-            </Text>
+          <View>
+            <View
+              style={[styles.header, { paddingTop: insets.top + Spacing.sm }]}
+            >
+              <HeaderContent />
+              {error && (
+                <View style={styles.errorBanner}>
+                  <Text style={styles.errorBannerText}>⚠️ {error}</Text>
+                  <TouchableOpacity onPress={handleRefresh}>
+                    <Text style={styles.retryInline}>Retry</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+              <Text style={styles.sectionTitle}>
+                {filteredDoctors.length} Doctor
+                {filteredDoctors.length !== 1 ? 's' : ''} Available
+              </Text>
+            </View>
+
+            {/* ── Timezone filter chips ── */}
+            <TimezoneFilter
+              doctors={doctors}
+              timezones={timezones}
+              selectedTimezone={selectedTimezone}
+              onSelect={setSelectedTimezone}
+            />
           </View>
         }
         ListEmptyComponent={
           <EmptyState
-            icon="🩺"
-            title="No doctors found"
-            subtitle="Pull down to refresh and try again."
+            icon={selectedTimezone ? '🔍' : '🩺'}
+            title={
+              selectedTimezone
+                ? `No doctors in ${timezoneLabel(selectedTimezone)}`
+                : 'No doctors found'
+            }
+            subtitle={
+              selectedTimezone
+                ? 'Try a different timezone filter.'
+                : 'Pull down to refresh and try again.'
+            }
           />
         }
         refreshControl={
@@ -113,7 +144,9 @@ export default function DoctorsListScreen() {
           />
         }
         contentContainerStyle={
-          doctors.length === 0 ? styles.emptyContent : styles.listContent
+          filteredDoctors.length === 0
+            ? styles.emptyContent
+            : styles.listContent
         }
         showsVerticalScrollIndicator={false}
       />
@@ -138,6 +171,8 @@ function HeaderContent() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: Colors.background },
+
+  // Header (matches original)
   header: {
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.base,
@@ -185,6 +220,69 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.85)',
     marginTop: Spacing.xs,
   },
+
+  // Timezone filter section
+  filterSection: {
+    paddingHorizontal: Spacing.base,
+    paddingBottom: Spacing.sm,
+    marginBottom: Spacing.xs,
+  },
+  filterLabel: {
+    fontSize: Typography.sizes.xs,
+    fontWeight: Typography.weights.semibold,
+    color: Colors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: Spacing.sm,
+  },
+  filterChipsRow: {
+    gap: Spacing.sm,
+    paddingRight: Spacing.sm,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.full,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  chipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  chipText: {
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.semibold,
+    color: Colors.textSecondary,
+  },
+  chipTextActive: {
+    color: Colors.textInverse,
+  },
+  chipBadge: {
+    minWidth: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: Colors.primarySurface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 5,
+  },
+  chipBadgeActive: {
+    backgroundColor: 'rgba(255,255,255,0.25)',
+  },
+  chipBadgeText: {
+    fontSize: 11,
+    fontWeight: Typography.weights.bold,
+    color: Colors.primaryDark,
+  },
+  chipBadgeTextActive: {
+    color: Colors.textInverse,
+  },
+
   listContent: { paddingBottom: Spacing.xxxl },
   emptyContent: { flexGrow: 1 },
   errorBanner: {

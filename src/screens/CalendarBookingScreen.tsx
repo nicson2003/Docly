@@ -32,6 +32,9 @@ import {
   minutesToDisplay,
   DAY_ORDER,
 } from '../utils';
+import TimezoneFilter, {
+  timezoneLabel,
+} from '../components/common/TimezoneFilter';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -52,20 +55,17 @@ const DAY_CELL_SIZE = Math.floor((SCREEN_WIDTH - Spacing.base * 2) / 7);
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Returns "Monday" … "Sunday" for a JS Date (JS Sunday=0 → index 6 in DAY_ORDER). */
 function toDayOfWeek(date: Date): DayOfWeek {
-  const jsDay = date.getDay(); // 0=Sun … 6=Sat
-  const idx = jsDay === 0 ? 6 : jsDay - 1; // Mon=0 … Sun=6
+  const jsDay = date.getDay();
+  const idx = jsDay === 0 ? 6 : jsDay - 1;
   return DAY_ORDER[idx];
 }
 
-/** Converts a "HH:MM" 24h string to total minutes. */
 function to24hMinutes(t: string): number {
   const [h, m] = t.split(':').map(Number);
   return h * 60 + m;
 }
 
-/** ISO date string "YYYY-MM-DD" for a Date object (local). */
 function toDateKey(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(
     2,
@@ -73,7 +73,6 @@ function toDateKey(date: Date): string {
   )}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
-/** "Tue, Mar 18" */
 function formatHeaderDate(date: Date): string {
   return date.toLocaleDateString('en-AU', {
     weekday: 'short',
@@ -82,7 +81,6 @@ function formatHeaderDate(date: Date): string {
   });
 }
 
-/** "March 2025" */
 function formatMonthYear(date: Date): string {
   return date.toLocaleDateString('en-AU', { month: 'long', year: 'numeric' });
 }
@@ -90,7 +88,7 @@ function formatMonthYear(date: Date): string {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 interface DayCellProps {
-  date: Date | null; // null = empty padding cell
+  date: Date | null;
   isToday: boolean;
   isSelected: boolean;
   hasDoctors: boolean;
@@ -107,10 +105,7 @@ const DayCell = React.memo(
     isPast,
     onPress,
   }: DayCellProps) => {
-    if (!date) {
-      return <View style={[styles.dayCell, styles.dayCellEmpty]} />;
-    }
-
+    if (!date) return <View style={[styles.dayCell, styles.dayCellEmpty]} />;
     return (
       <TouchableOpacity
         style={[
@@ -197,7 +192,7 @@ interface DoctorRowProps {
 const DoctorRow = React.memo(({ item, onPress }: DoctorRowProps) => {
   const color = getAvatarColor(item.doctor.name);
   const initials = getInitials(item.doctor.name);
-  const tzLabel = item.doctor.timezone.replace('Australia/', '');
+  const tz = timezoneLabel(item.doctor.timezone);
 
   return (
     <TouchableOpacity
@@ -214,7 +209,7 @@ const DoctorRow = React.memo(({ item, onPress }: DoctorRowProps) => {
           {item.doctor.name}
         </Text>
         <Text style={styles.doctorRowMeta}>
-          {item.displayStart} – {item.displayEnd} · {tzLabel}
+          {item.displayStart} – {item.displayEnd} · {tz}
         </Text>
       </View>
       <View style={styles.doctorRowArrow}>
@@ -279,7 +274,7 @@ function ConfirmModal({
 
   const color = getAvatarColor(item.doctor.name);
   const initials = getInitials(item.doctor.name);
-  const tzLabel = item.doctor.timezone.replace('Australia/', '');
+  const tz = timezoneLabel(item.doctor.timezone);
 
   return (
     <Modal
@@ -289,31 +284,23 @@ function ConfirmModal({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      {/* Backdrop */}
       <Animated.View style={[styles.modalBackdrop, { opacity: backdropAnim }]}>
         <TouchableOpacity
           style={StyleSheet.absoluteFillObject}
           onPress={onClose}
         />
       </Animated.View>
-
-      {/* Sheet */}
       <Animated.View
         style={[styles.modalSheet, { transform: [{ translateY: slideAnim }] }]}
       >
-        {/* Handle */}
         <View style={styles.modalHandle} />
-
-        {/* Doctor header */}
         <View style={styles.modalDoctorHeader}>
           <DoctorAvatar initials={initials} color={color} size={56} />
           <View style={styles.modalDoctorInfo}>
             <Text style={styles.modalDoctorName}>{item.doctor.name}</Text>
-            <Text style={styles.modalDoctorTz}>📍 {tzLabel} time</Text>
+            <Text style={styles.modalDoctorTz}>📍 {tz} time</Text>
           </View>
         </View>
-
-        {/* Details */}
         <View style={styles.modalDetails}>
           <ModalDetailRow
             icon="📅"
@@ -332,17 +319,14 @@ function ConfirmModal({
           <ModalDetailRow
             icon="🌏"
             label="Timezone"
-            value={`${tzLabel} (${item.doctor.timezone})`}
+            value={`${tz} (${item.doctor.timezone})`}
           />
         </View>
-
         <View style={styles.modalNotice}>
           <Text style={styles.modalNoticeText}>
             ℹ️ Slots recur weekly. Booking is saved locally on this device.
           </Text>
         </View>
-
-        {/* Actions */}
         <View style={styles.modalActions}>
           <TouchableOpacity
             style={styles.modalCancelBtn}
@@ -393,8 +377,11 @@ export default function CalendarBookingScreen() {
   const insets = useSafeAreaInsets();
   const dispatch = useAppDispatch();
 
-  const doctors = useAppSelector(s => s.doctors.items);
+  const allDoctors = useAppSelector(s => s.doctors.items);
   const bookings = useAppSelector(s => s.bookings.items);
+
+  // Timezone filter state
+  const [selectedTimezone, setSelectedTimezone] = useState<string | null>(null);
 
   // Calendar state
   const today = useMemo(() => {
@@ -414,11 +401,30 @@ export default function CalendarBookingScreen() {
   const [pendingItem, setPendingItem] = useState<AvailableDoctor | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
-  // Animation for the bottom panel
   const panelAnim = useRef(new Animated.Value(0)).current;
   const doctorsAnim = useRef(new Animated.Value(0)).current;
 
-  // Confirmed booking slot IDs — for disabling already-booked slots
+  // Unique sorted timezones
+  const timezones = useMemo(() => {
+    const tzSet = new Set<string>();
+    allDoctors.forEach(d => tzSet.add(d.timezone));
+    return Array.from(tzSet).sort();
+  }, [allDoctors]);
+
+  // Doctors after timezone filter
+  const doctors = useMemo(() => {
+    if (!selectedTimezone) return allDoctors;
+    return allDoctors.filter(d => d.timezone === selectedTimezone);
+  }, [allDoctors, selectedTimezone]);
+
+  // Reset slot/date selections when filter changes
+  const handleTimezoneSelection = useCallback((tz: string | null) => {
+    setSelectedTimezone(tz);
+    setSelectedDate(null);
+    setSelectedSlotMins(null);
+  }, []);
+
+  // Confirmed booking slot IDs
   const confirmedSlotIds = useMemo(() => {
     const ids = new Set<string>();
     bookings
@@ -427,18 +433,14 @@ export default function CalendarBookingScreen() {
     return ids;
   }, [bookings]);
 
-  // ── Calendar grid ──────────────────────────────────────────────────────────
-
-  /** All days that have ≥1 available doctor (used for dot indicator). */
+  // Days with doctors (for dot indicators)
   const daysWithDoctors = useMemo(() => {
     const set = new Set<string>();
     doctors.forEach(doctor => {
       doctor.schedule.forEach(daySchedule => {
-        // Find the next N occurrences of this day across the viewable range
         const targetDay = daySchedule.day;
-        // Mark the next 8 weeks
         for (let w = 0; w < 8; w++) {
-          const dayIdx = DAY_ORDER.indexOf(targetDay); // 0=Mon … 6=Sun
+          const dayIdx = DAY_ORDER.indexOf(targetDay);
           const todayIdx = today.getDay() === 0 ? 6 : today.getDay() - 1;
           let diff = dayIdx - todayIdx + w * 7;
           if (diff < 0) diff += 7;
@@ -451,49 +453,40 @@ export default function CalendarBookingScreen() {
     return set;
   }, [doctors, today]);
 
-  /** Builds the 6×7 grid of Date | null cells for the current view month. */
+  // Calendar grid
   const calendarCells = useMemo(() => {
     const year = viewDate.getFullYear();
     const month = viewDate.getMonth();
-    const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+    const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
-    // Shift so Monday is index 0
     const offset = firstDay === 0 ? 6 : firstDay - 1;
     const cells: (Date | null)[] = [];
     for (let i = 0; i < offset; i++) cells.push(null);
-    for (let d = 1; d <= daysInMonth; d++) {
-      cells.push(new Date(year, month, d));
-    }
-    // Pad to complete last row
+    for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
     while (cells.length % 7 !== 0) cells.push(null);
     return cells;
   }, [viewDate]);
 
-  // ── Available slots for the selected date ─────────────────────────────────
-
-  /** All unique 30-min slot times (in minutes) available on the selected date. */
+  // Available slot times on selected date
   const availableSlotMins = useMemo(() => {
     if (!selectedDate) return [];
     const dayName = toDayOfWeek(selectedDate);
     const slotSet = new Set<number>();
-
     doctors.forEach(doctor => {
       const daySchedule = doctor.schedule.find(s => s.day === dayName);
       if (!daySchedule) return;
-      daySchedule.slots.forEach(slot => {
-        slotSet.add(to24hMinutes(slot.startTime));
-      });
+      daySchedule.slots.forEach(slot =>
+        slotSet.add(to24hMinutes(slot.startTime)),
+      );
     });
-
     return Array.from(slotSet).sort((a, b) => a - b);
   }, [selectedDate, doctors]);
 
-  /** Number of available (non-booked) doctors per slot minute. */
+  // Doctor count per slot
   const doctorCountPerSlot = useMemo(() => {
     const map = new Map<number, number>();
     if (!selectedDate) return map;
     const dayName = toDayOfWeek(selectedDate);
-
     availableSlotMins.forEach(mins => {
       let count = 0;
       doctors.forEach(doctor => {
@@ -503,20 +496,18 @@ export default function CalendarBookingScreen() {
           s => to24hMinutes(s.startTime) === mins,
         );
         if (!slot) return;
-        const key = `${doctor.id}::${slot.id}`;
-        if (!confirmedSlotIds.has(key)) count++;
+        if (!confirmedSlotIds.has(`${doctor.id}::${slot.id}`)) count++;
       });
       map.set(mins, count);
     });
     return map;
   }, [selectedDate, doctors, availableSlotMins, confirmedSlotIds]);
 
-  /** Doctors available at the selected slot. */
+  // Available doctors at selected slot
   const availableDoctors = useMemo((): AvailableDoctor[] => {
     if (!selectedDate || selectedSlotMins === null) return [];
     const dayName = toDayOfWeek(selectedDate);
     const result: AvailableDoctor[] = [];
-
     doctors.forEach(doctor => {
       const daySchedule = doctor.schedule.find(s => s.day === dayName);
       if (!daySchedule) return;
@@ -524,8 +515,7 @@ export default function CalendarBookingScreen() {
         s => to24hMinutes(s.startTime) === selectedSlotMins,
       );
       if (!slot) return;
-      const key = `${doctor.id}::${slot.id}`;
-      if (confirmedSlotIds.has(key)) return; // already booked
+      if (confirmedSlotIds.has(`${doctor.id}::${slot.id}`)) return;
       result.push({
         doctor,
         slotId: slot.id,
@@ -536,12 +526,10 @@ export default function CalendarBookingScreen() {
         dayOfWeek: dayName,
       });
     });
-
     return result;
   }, [selectedDate, selectedSlotMins, doctors, confirmedSlotIds]);
 
-  // ── Interactions ──────────────────────────────────────────────────────────
-
+  // Interactions
   const handleMonthChange = useCallback((dir: 1 | -1) => {
     setViewDate(prev => {
       const d = new Date(prev);
@@ -556,7 +544,6 @@ export default function CalendarBookingScreen() {
     (date: Date) => {
       setSelectedDate(date);
       setSelectedSlotMins(null);
-      // Animate slots panel in
       panelAnim.setValue(0);
       Animated.spring(panelAnim, {
         toValue: 1,
@@ -611,16 +598,11 @@ export default function CalendarBookingScreen() {
     setModalVisible(false);
     setTimeout(() => {
       setPendingItem(null);
-      // Navigate to My Bookings tab
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'MainTabs' }],
-      });
+      navigation.reset({ index: 0, routes: [{ name: 'MainTabs' }] });
     }, 320);
   }, [pendingItem, dispatch, navigation]);
 
-  // ── Derived display values ────────────────────────────────────────────────
-
+  // Derived
   const panelTranslateY = panelAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [24, 0],
@@ -629,16 +611,13 @@ export default function CalendarBookingScreen() {
     inputRange: [0, 1],
     outputRange: [20, 0],
   });
-
   const selectedDateLabel = selectedDate
     ? formatHeaderDate(selectedDate)
     : null;
 
-  // ── Render ────────────────────────────────────────────────────────────────
-
   return (
     <View style={[styles.screen, { paddingTop: insets.top }]}>
-      {/* ── Header ──────────────────────────────────────────────────────── */}
+      {/* ── Header ── */}
       <View style={styles.header}>
         <View>
           <Text style={styles.headerApp}>Docly</Text>
@@ -659,7 +638,15 @@ export default function CalendarBookingScreen() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        {/* ── Month Navigation ──────────────────────────────────────────── */}
+        {/* ── Timezone Filter Chips ── */}
+        <TimezoneFilter
+          timezones={timezones}
+          doctors={allDoctors}
+          selectedTimezone={selectedTimezone}
+          onSelect={handleTimezoneSelection}
+        />
+
+        {/* ── Month Navigation ── */}
         <View style={styles.monthNav}>
           <TouchableOpacity
             style={styles.monthNavBtn}
@@ -680,7 +667,7 @@ export default function CalendarBookingScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* ── Day-of-week labels ────────────────────────────────────────── */}
+        {/* ── Day-of-week labels ── */}
         <View style={styles.dowRow}>
           {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => (
             <View key={i} style={styles.dowCell}>
@@ -689,41 +676,47 @@ export default function CalendarBookingScreen() {
           ))}
         </View>
 
-        {/* ── Calendar Grid ─────────────────────────────────────────────── */}
+        {/* ── Calendar Grid ── */}
         <View style={styles.calendarGrid}>
           {calendarCells.map((date, idx) => {
             const dateKey = date ? toDateKey(date) : null;
-            const isToday = !!date && date.getTime() === today.getTime();
-            const isSelected =
-              !!date &&
-              !!selectedDate &&
-              date.getTime() === selectedDate.getTime();
-            const hasDoctors = !!dateKey && daysWithDoctors.has(dateKey);
-            const isPast = !!date && date < today;
-
             return (
               <DayCell
                 key={dateKey ?? `empty-${idx}`}
                 date={date}
-                isToday={isToday}
-                isSelected={isSelected}
-                hasDoctors={hasDoctors}
-                isPast={isPast}
+                isToday={!!date && date.getTime() === today.getTime()}
+                isSelected={
+                  !!date &&
+                  !!selectedDate &&
+                  date.getTime() === selectedDate.getTime()
+                }
+                hasDoctors={!!dateKey && daysWithDoctors.has(dateKey)}
+                isPast={!!date && date < today}
                 onPress={handleDatePress}
               />
             );
           })}
         </View>
 
-        {/* ── Legend ───────────────────────────────────────────────────── */}
+        {/* ── Legend ── */}
         <View style={styles.legend}>
           <View style={styles.legendItem}>
             <View style={styles.legendDot} />
             <Text style={styles.legendText}>Doctors available</Text>
           </View>
+          {selectedTimezone && (
+            <View style={styles.legendItem}>
+              <View
+                style={[styles.legendDot, { backgroundColor: Colors.accent }]}
+              />
+              <Text style={styles.legendText}>
+                Filtered: {timezoneLabel(selectedTimezone)}
+              </Text>
+            </View>
+          )}
         </View>
 
-        {/* ── Time Slots Panel ─────────────────────────────────────────── */}
+        {/* ── Time Slots Panel ── */}
         {selectedDate && availableSlotMins.length > 0 && (
           <Animated.View
             style={[
@@ -763,7 +756,7 @@ export default function CalendarBookingScreen() {
           </Animated.View>
         )}
 
-        {/* ── No slots message ─────────────────────────────────────────── */}
+        {/* ── No slots ── */}
         {selectedDate && availableSlotMins.length === 0 && (
           <Animated.View
             style={[
@@ -774,16 +767,25 @@ export default function CalendarBookingScreen() {
               },
             ]}
           >
-            <Text style={styles.noSlotsEmoji}>😔</Text>
+            <Text style={styles.noSlotsEmoji}>
+              {selectedTimezone ? '🔍' : '😔'}
+            </Text>
             <Text style={styles.noSlotsTitle}>No doctors available</Text>
             <Text style={styles.noSlotsSub}>
-              No doctors are scheduled on {formatHeaderDate(selectedDate)}. Try
-              another date.
+              {selectedTimezone
+                ? `No ${timezoneLabel(
+                    selectedTimezone,
+                  )} doctors are scheduled on ${formatHeaderDate(
+                    selectedDate,
+                  )}. Try another date or clear the filter.`
+                : `No doctors are scheduled on ${formatHeaderDate(
+                    selectedDate,
+                  )}. Try another date.`}
             </Text>
           </Animated.View>
         )}
 
-        {/* ── Available Doctors ─────────────────────────────────────────── */}
+        {/* ── Available Doctors ── */}
         {selectedSlotMins !== null && (
           <Animated.View
             style={[
@@ -807,7 +809,6 @@ export default function CalendarBookingScreen() {
                 {minutesToDisplay(selectedSlotMins + 30)}
               </Text>
             </View>
-
             {availableDoctors.length > 0 ? (
               availableDoctors.map(item => (
                 <DoctorRow
@@ -826,11 +827,10 @@ export default function CalendarBookingScreen() {
           </Animated.View>
         )}
 
-        {/* Bottom padding */}
         <View style={{ height: insets.bottom + Spacing.xxl }} />
       </ScrollView>
 
-      {/* ── Confirmation Modal ───────────────────────────────────────────── */}
+      {/* ── Confirmation Modal ── */}
       <ConfirmModal
         visible={modalVisible}
         item={pendingItem}
@@ -845,10 +845,7 @@ export default function CalendarBookingScreen() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
+  screen: { flex: 1, backgroundColor: Colors.background },
 
   // Header
   header: {
@@ -890,9 +887,46 @@ const styles = StyleSheet.create({
   },
   headerIconText: { fontSize: 26 },
 
-  scrollContent: {
-    paddingHorizontal: Spacing.base,
-    paddingTop: Spacing.base,
+  scrollContent: { paddingHorizontal: Spacing.base, paddingTop: Spacing.base },
+
+  // Timezone filter chips
+  tzFilterSection: {
+    marginBottom: Spacing.base,
+  },
+  tzFilterLabel: {
+    fontSize: Typography.sizes.xs,
+    fontWeight: Typography.weights.semibold,
+    color: Colors.textTertiary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: Spacing.sm,
+  },
+  tzChipsRow: {
+    gap: Spacing.sm,
+    paddingRight: Spacing.sm,
+  },
+  tzChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderRadius: Radius.full,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  tzChipActive: {
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
+  },
+  tzChipText: {
+    fontSize: Typography.sizes.sm,
+    fontWeight: Typography.weights.semibold,
+    color: Colors.textSecondary,
+  },
+  tzChipTextActive: {
+    color: Colors.textInverse,
   },
 
   // Month navigation
@@ -927,10 +961,7 @@ const styles = StyleSheet.create({
   },
 
   // Day-of-week row
-  dowRow: {
-    flexDirection: 'row',
-    marginBottom: 2,
-  },
+  dowRow: { flexDirection: 'row', marginBottom: 2 },
   dowCell: {
     width: DAY_CELL_SIZE,
     alignItems: 'center',
@@ -958,9 +989,7 @@ const styles = StyleSheet.create({
     marginVertical: 1,
   },
   dayCellEmpty: {},
-  dayCellSelected: {
-    backgroundColor: Colors.primary,
-  },
+  dayCellSelected: { backgroundColor: Colors.primary },
   dayCellPast: {},
   dayCellText: {
     fontSize: Typography.sizes.sm,
@@ -975,9 +1004,7 @@ const styles = StyleSheet.create({
     color: Colors.textInverse,
     fontWeight: Typography.weights.bold,
   },
-  dayCellTextPast: {
-    color: Colors.textDisabled,
-  },
+  dayCellTextPast: { color: Colors.textDisabled },
   dayCellDot: {
     position: 'absolute',
     bottom: 4,
@@ -986,9 +1013,7 @@ const styles = StyleSheet.create({
     borderRadius: 2.5,
     backgroundColor: Colors.accent,
   },
-  dayCellDotSelected: {
-    backgroundColor: 'rgba(255,255,255,0.8)',
-  },
+  dayCellDotSelected: { backgroundColor: 'rgba(255,255,255,0.8)' },
 
   // Legend
   legend: {
@@ -996,31 +1021,16 @@ const styles = StyleSheet.create({
     gap: Spacing.lg,
     paddingHorizontal: Spacing.xs,
     marginBottom: Spacing.md,
+    flexWrap: 'wrap',
   },
-  legendItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: Spacing.xs,
-  },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: Spacing.xs },
   legendDot: {
     width: 8,
     height: 8,
     borderRadius: 4,
     backgroundColor: Colors.accent,
   },
-  legendToday: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: Colors.primary,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  legendText: {
-    fontSize: Typography.sizes.xs,
-    color: Colors.textTertiary,
-  },
+  legendText: { fontSize: Typography.sizes.xs, color: Colors.textTertiary },
 
   // Slots panel
   slotsPanel: {
@@ -1057,10 +1067,7 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     marginBottom: Spacing.md,
   },
-  timeChipsScroll: {
-    gap: Spacing.sm,
-    paddingRight: Spacing.sm,
-  },
+  timeChipsScroll: { gap: Spacing.sm, paddingRight: Spacing.sm },
 
   // Time chips
   timeChip: {
@@ -1083,9 +1090,7 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.semibold,
     color: Colors.textPrimary,
   },
-  timeChipTextSelected: {
-    color: Colors.textInverse,
-  },
+  timeChipTextSelected: { color: Colors.textInverse },
   timeChipBadge: {
     minWidth: 18,
     height: 18,
@@ -1095,17 +1100,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 4,
   },
-  timeChipBadgeSelected: {
-    backgroundColor: 'rgba(255,255,255,0.25)',
-  },
+  timeChipBadgeSelected: { backgroundColor: 'rgba(255,255,255,0.25)' },
   timeChipBadgeText: {
     fontSize: 10,
     fontWeight: Typography.weights.bold,
     color: Colors.primary,
   },
-  timeChipBadgeTextSelected: {
-    color: Colors.textInverse,
-  },
+  timeChipBadgeTextSelected: { color: Colors.textInverse },
 
   // No slots
   noSlotsCard: {
@@ -1156,9 +1157,7 @@ const styles = StyleSheet.create({
     color: Colors.textTertiary,
     fontWeight: Typography.weights.medium,
   },
-  noDoctorsRow: {
-    padding: Spacing.base,
-  },
+  noDoctorsRow: { padding: Spacing.base },
   noDoctorsText: {
     fontSize: Typography.sizes.sm,
     color: Colors.textSecondary,
@@ -1175,21 +1174,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.divider,
   },
-  doctorRowAccent: {
-    width: 3,
-    height: 46,
-    borderRadius: 2,
-  },
+  doctorRowAccent: { width: 3, height: 46, borderRadius: 2 },
   doctorRowInfo: { flex: 1, gap: 3 },
   doctorRowName: {
     fontSize: Typography.sizes.base,
     fontWeight: Typography.weights.semibold,
     color: Colors.textPrimary,
   },
-  doctorRowMeta: {
-    fontSize: Typography.sizes.xs,
-    color: Colors.textSecondary,
-  },
+  doctorRowMeta: { fontSize: Typography.sizes.xs, color: Colors.textSecondary },
   doctorRowArrow: {
     width: 28,
     height: 28,
@@ -1205,7 +1197,7 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.semibold,
   },
 
-  // Confirmation modal
+  // Modal
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(15,23,42,0.55)',
@@ -1246,10 +1238,7 @@ const styles = StyleSheet.create({
     fontWeight: Typography.weights.bold,
     color: Colors.textPrimary,
   },
-  modalDoctorTz: {
-    fontSize: Typography.sizes.sm,
-    color: Colors.textSecondary,
-  },
+  modalDoctorTz: { fontSize: Typography.sizes.sm, color: Colors.textSecondary },
   modalDetails: {
     backgroundColor: Colors.surfaceSecondary,
     borderRadius: Radius.lg,
@@ -1295,10 +1284,7 @@ const styles = StyleSheet.create({
     color: Colors.primaryDark,
     lineHeight: 18,
   },
-  modalActions: {
-    flexDirection: 'row',
-    gap: Spacing.sm,
-  },
+  modalActions: { flexDirection: 'row', gap: Spacing.sm },
   modalCancelBtn: {
     flex: 1,
     borderWidth: 1.5,
